@@ -1,0 +1,35 @@
+{
+    "versionLabel": "1.1",
+    "watchapp": {
+        "watchface": true
+    },
+    "appKeys": {},
+    "longName": "Miami Heat",
+    "shortName": "Miami Heat",
+    "capabilities": [
+        ""
+    ],
+    "companyName": "mongo527",
+    "resources": {
+        "media": [
+            {
+                "file": "images/HeatLogo.png",
+                "type": "png-trans",
+                "name": "IMAGE_HEAT"
+            },
+            {
+                "file": "images/bluetooth-icon.png",
+                "type": "png-trans",
+                "name": "IMAGE_BT"
+            },
+            {
+                "menuIcon": true,
+                "file": "images/HeatLogoIcon.png",
+                "type": "png",
+                "name": "IMAGE_HEAT_ICON"
+            }
+        ]
+    },
+    "versionCode": 1,
+    "uuid": "0228cf78-f147-4101-9f1e-b50c5bb88ea5"
+}
