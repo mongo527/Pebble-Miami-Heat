@@ -5,6 +5,9 @@ TextLayer *time_layer;
 TextLayer *date_layer;
 TextLayer *white_layer;
 TextLayer *battery_layer;
+TextLayer *home_layer;
+TextLayer *away_layer;
+TextLayer *game_layer;
 
 Layer *status_layer;
 Layer *root;
@@ -14,6 +17,36 @@ static BitmapLayer *bg_layer;
 
 static GBitmap *bt;
 static BitmapLayer *bt_layer;
+
+time_t start;
+
+//char *game_time;
+//char *event_id;
+
+enum {
+    AKEY_GET_EVENTS = 0,
+    AKEY_GAME_TIME = 1,
+    AKEY_HOME_TEAM = 2,
+    AKEY_AWAY_TEAM = 3,
+    AKEY_HOME_SCORE = 4,
+    AKEY_AWAY_SCORE = 5,
+};
+
+void get_events_handler() {
+    Tuplet events_tuple = TupletCString(AKEY_GET_EVENTS, "events");
+	
+	DictionaryIterator *iter;
+	app_message_outbox_begin(&iter);
+	
+	if (iter == NULL) {
+		return;
+	}
+	
+	dict_write_tuplet(iter, &events_tuple);
+	dict_write_end(iter);
+	
+	app_message_outbox_send();
+}
 
 static void battery_handler(BatteryChargeState battery) {
     static char batt[] = "100%";
@@ -48,9 +81,15 @@ static void time_handler(struct tm* tick_time, TimeUnits units_changed) {
     }
     
     text_layer_set_text(time_layer, time_text);
-    
     battery_handler(battery_state_service_peek());
     
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "%lu", (uint32_t) time(NULL) - start);
+    
+    if(time(NULL) - start >= 300) {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "Inside @ %lu", (uint32_t) time(NULL) - start);
+        get_events_handler();
+        time(&start);
+    }
 }
 
 static void bluetooth_handler(bool connected) {
@@ -60,7 +99,7 @@ static void bluetooth_handler(bool connected) {
     layer_mark_dirty(bitmap_layer_get_layer(bt_layer));
 }
 
-void tap_handler(AccelAxisType axis, int32_t direction){
+/*void tap_handler(AccelAxisType axis, int32_t direction){
     time_t now = time(NULL);
     layer_set_hidden(status_layer, false);
     
@@ -71,7 +110,7 @@ void tap_handler(AccelAxisType axis, int32_t direction){
         }
     }
     layer_mark_dirty(status_layer);
-}
+}*/
 
 void handle_init(void) {
     window = window_create();
@@ -129,9 +168,16 @@ void handle_init(void) {
     bluetooth_connection_service_subscribe(&bluetooth_handler);
     //accel_tap_service_subscribe(&tap_handler);
     
+    game_layer = text_layer_create(GRect(0, 145, /* width */ frame.size.w, 26 /* height */));
+    text_layer_set_text_color(game_layer, GColorBlack);
+    text_layer_set_background_color(game_layer, GColorClear);
+    text_layer_set_font(game_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
+    text_layer_set_text_alignment(game_layer, GTextAlignmentCenter);
+    
     layer_add_child(root, text_layer_get_layer(white_layer));
     layer_add_child(root, text_layer_get_layer(time_layer));
-    layer_add_child(root, text_layer_get_layer(date_layer));
+    //layer_add_child(root, text_layer_get_layer(date_layer));
+    layer_add_child(root, text_layer_get_layer(game_layer));
     layer_add_child(root, bitmap_layer_get_layer(bg_layer));
     layer_add_child(root, status_layer);
 }
@@ -151,11 +197,71 @@ void handle_deinit(void) {
     text_layer_destroy(time_layer);
     text_layer_destroy(date_layer);
     text_layer_destroy(battery_layer);
-    window_destroy(window);
+    text_layer_destroy(game_layer);
+}
+
+void events_in_received_handler(DictionaryIterator *iter) {
+    Tuple *gameTime = dict_find(iter, AKEY_GAME_TIME);
+    Tuple *homeTeam = dict_find(iter, AKEY_HOME_TEAM);
+    Tuple *awayTeam = dict_find(iter, AKEY_AWAY_TEAM);
+        
+    static char game[] = "00:00 - AAA @ BBB";
+    
+    if(strcmp(gameTime->value->cstring, "No Game Today") == 0) {
+        snprintf(game, sizeof(game), "No Game Today");
+    }
+    else {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "%s - %s @ %s", gameTime->value->cstring, awayTeam->value->cstring, homeTeam->value->cstring);
+        snprintf(game, sizeof(game), "%s - %s @ %s", gameTime->value->cstring, awayTeam->value->cstring, homeTeam->value->cstring);
+    }
+        
+    text_layer_set_text(game_layer, game);
+    layer_mark_dirty(text_layer_get_layer(game_layer));
+}
+
+void scores_in_received_handler(DictionaryIterator *iter) {
+    Tuple *homeTeam = dict_find(iter, AKEY_HOME_TEAM);
+    Tuple *awayTeam = dict_find(iter, AKEY_AWAY_TEAM);
+    Tuple *homeScore = dict_find(iter, AKEY_HOME_SCORE);
+    Tuple *awayScore = dict_find(iter, AKEY_AWAY_SCORE);
+    
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "%s: %d - %s: %d", awayTeam->value->cstring, awayScore->value->int16, homeTeam->value->cstring, homeScore->value->int16);
+    
+    static char score[] = "AAA: ### - BBB: ###";
+    snprintf(score, sizeof(score), "%s: %d - %s: %d", awayTeam->value->cstring, awayScore->value->int16, homeTeam->value->cstring, homeScore->value->int16);
+    
+    text_layer_set_text(game_layer, score);
+    layer_mark_dirty(text_layer_get_layer(game_layer));
+}
+
+static void in_received_handler(DictionaryIterator *iter, void *context) {
+    Tuple *gameTime_tuple = dict_find(iter, AKEY_GAME_TIME);
+    Tuple *homeScore_tuple = dict_find(iter, AKEY_HOME_SCORE);
+    
+    if(gameTime_tuple) {
+        events_in_received_handler(iter);
+    }
+    
+    else if(homeScore_tuple) {
+        scores_in_received_handler(iter);
+    }
+}
+
+static void app_message_init(void) {
+	app_message_register_inbox_received(in_received_handler);
+	//app_message_register_inbox_dropped(in_dropped_handler);
+	//app_message_register_outbox_failed(out_failed_handler);
+	
+	app_message_open(256, 256);
 }
 
 int main(void) {
     handle_init();
+    app_message_init();
+    
+    get_events_handler();
+    time(&start);
+    
     app_event_loop();
     handle_deinit();
 }
