@@ -34,7 +34,7 @@ function sendMessage(json) {
     
 }
 
-function fetchEvents() {
+function fetchEvents(eventDate) {
     var response;
     var req = new XMLHttpRequest();
     
@@ -43,8 +43,10 @@ function fetchEvents() {
     var homeTeam;
     var awayTeam;
     var gameTime;
+    var gameHour;
+    var gameMin;
     
-    req.open('GET', BASE_URL + "events.json?sport=nba", true);
+    req.open('GET', BASE_URL + "events.json?sport=nba&date=" + eventDate, true);
     req.setRequestHeader("Authorization", "Bearer 08f07b28-0865-415d-bdfe-5d8f95f3f989");
     req.setRequestHeader("Accept-Encoding", "gzip");
     
@@ -58,10 +60,15 @@ function fetchEvents() {
                     homeTeam = response.event[index].home_team.abbreviation;
                     awayTeam = response.event[index].away_team.abbreviation;
                     eventStatus = response.event[index].event_status;
-                    gameTime = (response.event[index].start_date_time).match(/^(\d+\-\d+\-\d+T)(\d\d:\d\d)/)[2];
+                    gameHour = (response.event[index].start_date_time).match(/^(\d+\-\d+\-\d+T)(\d\d)(:\d\d)/)[2];
+                    gameMin = (response.event[index].start_date_time).match(/^(\d+\-\d+\-\d+T)(\d\d:)(\d\d)/)[3];
+                    //gameTime = (response.event[index].start_date_time).match(/^(\d+\-\d+\-\d+T)(\d\d:\d\d)/)[2];
                     break;
                 }
             }
+            gameHour = parseInt(gameHour) % 12;
+            gameTime = gameHour + ":" + gameMin;
+            
             if(eventID === "") {
                 sendMessage({"GAME_TIME": "No Game Today"});
             }
@@ -109,6 +116,6 @@ function fetchScores(eventID, homeTeam, awayTeam) {
 Pebble.addEventListener("appmessage", function(e) {
     
     if(e.payload.GET_EVENTS) {
-        fetchEvents();
+        fetchEvents(e.payload.GET_EVENTS);
     }
 });

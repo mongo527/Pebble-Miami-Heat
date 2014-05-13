@@ -1,42 +1,42 @@
 {
-    "versionCode": 1,
-    "shortName": "Miami Heat",
-    "capabilities": [
-        ""
-    ],
     "resources": {
         "media": [
             {
-                "type": "png-trans",
                 "name": "IMAGE_HEAT",
+                "type": "png-trans",
                 "file": "images/HeatLogo.png"
             },
             {
-                "type": "png-trans",
                 "name": "IMAGE_BT",
+                "type": "png-trans",
                 "file": "images/bluetooth-icon.png"
             },
             {
+                "name": "IMAGE_HEAT_ICON",
                 "menuIcon": true,
                 "type": "png",
-                "name": "IMAGE_HEAT_ICON",
                 "file": "images/HeatLogoIcon.png"
             }
         ]
     },
-    "versionLabel": "1.1",
     "companyName": "mongo527",
+    "shortName": "Miami Heat",
+    "uuid": "0228cf78-f147-4101-9f1e-b50c5bb88ea5",
+    "versionCode": 1,
+    "capabilities": [
+        ""
+    ],
+    "longName": "Miami Heat",
     "watchapp": {
         "watchface": true
     },
-    "uuid": "0228cf78-f147-4101-9f1e-b50c5bb88ea5",
     "appKeys": {
         "GAME_TIME": 1,
         "HOME_TEAM": 2,
-        "AWAY_TEAM": 3,
-        "GET_EVENTS": 0,
+        "HOME_SCORE": 4,
         "AWAY_SCORE": 5,
-        "HOME_SCORE": 4
+        "AWAY_TEAM": 3,
+        "GET_EVENTS": 0
     },
-    "longName": "Miami Heat"
+    "versionLabel": "1.1"
 }
